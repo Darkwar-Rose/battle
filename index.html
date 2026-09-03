@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>3-Troop Battle Predictor | 3부대 승패 예측기</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --card-border: #334155;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --team-a: #3b82f6;
+      --team-a-bg: rgba(59, 130, 246, 0.12);
+      --team-b: #ef4444;
+      --team-b-bg: rgba(239, 68, 68, 0.12);
+      --accent: #10b981;
+      --accent-gold: #f59e0b;
+      --win: #10b981;
+      --lose: #ef4444;
+      --even: #f59e0b;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      padding: 12px;
+      line-height: 1.5;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .container {
+      max-width: 1080px;
+      margin: 0 auto;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 12px;
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 12px;
+    }
+    .brand h1 {
+      font-size: 1.25rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #60a5fa, #34d399);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .brand p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .lang-switcher {
+      display: flex;
+      gap: 6px;
+      background: var(--card-bg);
+      padding: 4px;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+    }
+    .lang-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      padding: 5px 9px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .lang-btn.active {
+      background: var(--team-a);
+      color: #fff;
+    }
+    /* Quick Card */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .input-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    @media (max-width: 600px) {
+      .input-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .team-box {
+      border-radius: 8px;
+      padding: 12px;
+    }
+    .team-box.a {
+      background: var(--team-a-bg);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+    .team-box.b {
+      background: var(--team-b-bg);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    .team-box label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .team-box.a label { color: #93c5fd; }
+    .team-box.b label { color: #fca5a5; }
+    .troop-inputs {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 6px;
+    }
+    .troop-inputs input {
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid var(--card-border);
+      color: #fff;
+      padding: 8px;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      text-align: center;
+      font-weight: bold;
+    }
+    .troop-inputs input:focus {
+      outline: none;
+      border-color: var(--team-a);
+    }
+    .actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .btn {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      gap: 6px;
+      transition: opacity 0.2s;
+    }
+    .btn:active { opacity: 0.8; }
+    .btn-primary { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #fff; }
+    .btn-secondary { background: #334155; color: #cbd5e1; }
+    
+    /* Result Banner */
+    .result-box {
+      margin-top: 14px;
+      padding: 14px;
+      border-radius: 8px;
+      background: #0f172a;
+      border: 1px solid var(--card-border);
+      display: none;
+    }
+    .result-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .result-verdict {
+      font-size: 1.05rem;
+      font-weight: 800;
+    }
+    .result-rate {
+      font-size: 1.15rem;
+      font-weight: 900;
+    }
+    .result-reason {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      border-top: 1px solid rgba(255,255,255,0.08);
+      padding-top: 8px;
+    }
+    
+    /* Multi Match Table */
+    .table-container {
+      overflow-x: auto;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+      -webkit-overflow-scrolling: touch;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+      min-width: 680px;
+      text-align: center;
+    }
+    th {
+      background: #1e293b;
+      padding: 8px 6px;
+      font-weight: 700;
+      color: #94a3b8;
+      border-bottom: 1px solid var(--card-border);
+      white-space: nowrap;
+    }
+    td {
+      padding: 8px 6px;
+      border-bottom: 1px solid #283548;
+      vertical-align: middle;
+    }
+    tr:nth-child(even) {
+      background: rgba(255,255,255,0.015);
+    }
+    .table-input {
+      width: 58px;
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: #fff;
+      padding: 4px;
+      border-radius: 4px;
+      text-align: center;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .badge-win { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+    .badge-lose { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+    .badge-even { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+    .btn-del {
+      background: none;
+      border: none;
+      color: #64748b;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    .btn-del:hover { color: #ef4444; }
+    
+    .table-tools {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 0.75rem;
+      border-radius: 6px;
+      font-weight: 600;
+      background: #334155;
+      color: #cbd5e1;
+      border: none;
+      cursor: pointer;
+    }
+    .btn-sm:hover { background: #475569; color: #fff; }
+    
+    footer {
+      text-align: center;
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-top: 24px;
+      padding-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand">
+        <h1 id="ui-title">3부대 승패 및 필승 예측기</h1>
+        <p id="ui-subtitle">순서 비공개 3전 2선승제 전술 승률 분석기</p>
+      </div>
+      <div class="lang-switcher">
+        <button class="lang-btn active" onclick="setLang('ko')">한국어</button>
+        <button class="lang-btn" onclick="setLang('en')">EN</button>
+        <button class="lang-btn" onclick="setLang('zh-TW')">繁體</button>
+        <button class="lang-btn" onclick="setLang('zh-CN')">简体</button>
+      </div>
+    </header>
+
+    <!-- Fast 1v1 Predictor Card -->
+    <div class="card">
+      <div class="card-title">
+        <span id="ui-fast-calc">⚡ 빠른 단판 예측</span>
+      </div>
+      <div class="input-grid">
+        <div class="team-box a">
+          <label id="ui-team-a-label">🔵 A팀 3부대 전투력 (순서 무관)</label>
+          <div class="troop-inputs">
+            <input type="number" id="qa1" placeholder="1500" value="1500" oninput="calcQuick()">
+            <input type="number" id="qa2" placeholder="1300" value="1300" oninput="calcQuick()">
+            <input type="number" id="qa3" placeholder="1100" value="1100" oninput="calcQuick()">
+          </div>
+        </div>
+        <div class="team-box b">
+          <label id="ui-team-b-label">🔴 B팀 3부대 전투력 (순서 무관)</label>
+          <div class="troop-inputs">
+            <input type="number" id="qb1" placeholder="1250" value="1250" oninput="calcQuick()">
+            <input type="number" id="qb2" placeholder="1150" value="1150" oninput="calcQuick()">
+            <input type="number" id="qb3" placeholder="950" value="950" oninput="calcQuick()">
+          </div>
+        </div>
+      </div>
+      <div class="result-box" id="quick-result" style="display: block;">
+        <div class="result-header">
+          <div class="result-verdict" id="q-verdict">★ A팀 절대 필승</div>
+          <div class="result-rate" id="q-rate">100.0%</div>
+        </div>
+        <div class="result-reason" id="q-reason">A 2군이 B 1군보다 강함 (배치 순서와 무관하게 100% 승리)</div>
+      </div>
+    </div>
+
+    <!-- Multi Match List Card -->
+    <div class="card">
+      <div class="card-title">
+        <span id="ui-multi-calc">📋 다중 경기 일괄 분석표</span>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>NO</th>
+              <th id="th-name">경기명</th>
+              <th>A-1</th><th>A-2</th><th>A-3</th>
+              <th>B-1</th><th>B-2</th><th>B-3</th>
+              <th id="th-rate">승률 (A)</th>
+              <th id="th-result">예측 결과</th>
+              <th id="th-reason">판정 이유</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="match-tbody">
+            <!-- Dynamic rows -->
+          </tbody>
+        </table>
+      </div>
+      <div class="table-tools">
+        <button class="btn-sm" onclick="addRow()" id="ui-add-row">+ 경기 추가</button>
+        <div>
+          <button class="btn-sm" onclick="resetSample()" id="ui-reset-btn">예시 복원</button>
+          <button class="btn-sm" onclick="clearRows()" id="ui-clear-btn">전체 비우기</button>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      3-Troop Battle Win Rate Predictor &copy; 2026. Mobile & Web optimized.
+    </footer>
+  </div>
+
+  <script>
+    const i18n = {
+      ko: {
+        title: "3부대 승패 및 필승 예측기",
+        subtitle: "순서 비공개 3전 2선승제 전술 승률 분석기",
+        fastCalc: "⚡ 빠른 단판 예측",
+        teamA: "🔵 A팀 3부대 전투력 (순서 무관)",
+        teamB: "🔴 B팀 3부대 전투력 (순서 무관)",
+        multiCalc: "📋 다중 경기 일괄 분석표",
+        matchName: "경기명",
+        winRate: "승률 (A)",
+        result: "예측 결과",
+        reason: "판정 이유",
+        addRow: "+ 경기 추가",
+        resetBtn: "예시 복원",
+        clearBtn: "전체 비우기",
+        matchPrefix: "경기 ",
+        aGuar: "★ A팀 절대 필승 (100%)",
+        bGuar: "★ B팀 절대 필승 (100%)",
+        aAdv: (r) => `A팀 우세 (확률 ${r}%)`,
+        bAdv: (r) => `B팀 우세 (확률 ${r}%)`,
+        tie: "완전 호각 (50.0%)",
+        aT2B1: "A 2군이 B 1군보다 강함 (배치 무관 무조건 2승)",
+        aT3B2: "A 3군이 B 2군보다 강함 (상대 1군 제물 흘려도 2승)",
+        bT2A1: "B 2군이 A 1군보다 강함 (배치 무관 B 2승)",
+        bT3A2: "B 3군이 A 2군보다 강함 (A 1군 제물 흘려도 B 2승)",
+        aMidAdv: (w) => `A 2군이 B 2군 제압 (36개 맞대결 중 ${w}개 A 승리)`,
+        bMidAdv: (w) => `B 2군이 A 2군 제압 (36개 맞대결 중 ${w}개 B 승리)`,
+        evenReason: "양측 2군 전력 동일 (순서 심리전에 따라 승패 갈림)"
+      },
+      en: {
+        title: "3-Troop Battle Predictor",
+        subtitle: "Blind Pick Best-of-3 Tactical Win Rate Analyzer",
+        fastCalc: "⚡ Quick Match Predictor",
+        teamA: "🔵 Team A Powers (Any order)",
+        teamB: "🔴 Team B Powers (Any order)",
+        multiCalc: "📋 Bulk Match Table",
+        matchName: "Match",
+        winRate: "Win Rate (A)",
+        result: "Prediction",
+        reason: "Tactical Reason",
+        addRow: "+ Add Match",
+        resetBtn: "Reset Demo",
+        clearBtn: "Clear All",
+        matchPrefix: "Match ",
+        aGuar: "★ Team A Guaranteed (100%)",
+        bGuar: "★ Team B Guaranteed (100%)",
+        aAdv: (r) => `Team A Favored (${r}%)`,
+        bAdv: (r) => `Team B Favored (${r}%)`,
+        tie: "Even Match (50.0%)",
+        aT2B1: "Team A Tier 2 beats Team B Tier 1 (Guaranteed 2+ wins)",
+        aT3B2: "Team A Tier 3 beats Team B Tier 2 (2 wins even sacrificing vs B1)",
+        bT2A1: "Team B Tier 2 beats Team A Tier 1 (Guaranteed 2+ wins for B)",
+        bT3A2: "Team B Tier 3 beats Team A Tier 2 (2 wins for B)",
+        aMidAdv: (w) => `Team A Tier 2 advantage (${w} of 36 matchups won)`,
+        bMidAdv: (w) => `Team B Tier 2 advantage (${w} of 36 matchups won)`,
+        evenReason: "Equal Tier 2 power (Result strictly depends on mind games)"
+      },
+      "zh-TW": {
+        title: "三部隊勝率與必勝預測器",
+        subtitle: "盲選三戰兩勝制 戰術勝率精密分析工具",
+        fastCalc: "⚡ 快速單場預測",
+        teamA: "🔵 A隊 3部隊戰力 (順序任意)",
+        teamB: "🔴 B隊 3部隊戰力 (順序任意)",
+        multiCalc: "📋 多場對戰批量分析表",
+        matchName: "比賽名稱",
+        winRate: "勝率 (A)",
+        result: "預測結果",
+        reason: "判定理由",
+        addRow: "+ 新增比賽",
+        resetBtn: "恢復範例",
+        clearBtn: "清空全部",
+        matchPrefix: "第 ",
+        matchSuffix: " 場",
+        aGuar: "★ A隊 絕對必勝 (100%)",
+        bGuar: "★ B隊 絕對必勝 (100%)",
+        aAdv: (r) => `A隊 優勢 (勝率 ${r}%)`,
+        bAdv: (r) => `B隊 優勢 (勝率 ${r}%)`,
+        tie: "完全勢均力敵 (50.0%)",
+        aT2B1: "A隊2軍戰力高於B隊1軍 (無論出戰順序必定2勝)",
+        aT3B2: "A隊3軍戰力高於B隊2軍 (即便B隊1軍取勝，其餘2場A隊必勝)",
+        bT2A1: "B隊2軍戰力高於A隊1軍 (無論出戰順序B隊必定2勝)",
+        bT3A2: "B隊3軍戰力高於A隊2軍 (即便A隊1軍取勝，其餘2場B隊必勝)",
+        aMidAdv: (w) => `A隊2軍壓制B隊2軍 (36種組合中A隊勝 ${w} 場)`,
+        bMidAdv: (w) => `B隊2軍壓制A隊2軍 (36種組合中B隊勝 ${w} 場)`,
+        evenReason: "雙方2軍戰力相同 (勝負取決於順序心理戰)"
+      },
+      "zh-CN": {
+        title: "三部队胜率与必胜预测器",
+        subtitle: "盲选三局两胜制 战术胜率精密分析工具",
+        fastCalc: "⚡ 快速单场预测",
+        teamA: "🔵 A队 3部队战力 (顺序任意)",
+        teamB: "🔴 B队 3部队战力 (顺序任意)",
+        multiCalc: "📋 多场对战批量分析表",
+        matchName: "比赛名称",
+        winRate: "胜率 (A)",
+        result: "预测结果",
+        reason: "判定理由",
+        addRow: "+ 添加比赛",
+        resetBtn: "恢复范例",
+        clearBtn: "清空全部",
+        matchPrefix: "第 ",
+        matchSuffix: " 场",
+        aGuar: "★ A队 绝对必胜 (100%)",
+        bGuar: "★ B队 绝对必胜 (100%)",
+        aAdv: (r) => `A队 优势 (胜率 ${r}%)`,
+        bAdv: (r) => `B队 优势 (胜率 ${r}%)`,
+        tie: "完全势均力敌 (50.0%)",
+        aT2B1: "A队2队战力高于B队1队 (无论出战顺序必定2胜)",
+        aT3B2: "A队3队战力高于B队2队 (即便B队1队取胜，其余2场A队必胜)",
+        bT2A1: "B队2队战力高于A队1队 (无论出战顺序B队必定2胜)",
+        bT3A2: "B队3队战力高于A队2队 (即便A队1队取胜，其余2场B队必胜)",
+        aMidAdv: (w) => `A队2队压制B队2队 (36种组合中A队胜 ${w} 场)`,
+        bMidAdv: (w) => `B队2队压制A队2队 (36种组合中B队胜 ${w} 场)`,
+        evenReason: "双方2队战力相同 (胜负取决于出战心理战)"
+      }
+    };
+
+    let curLang = 'ko';
+
+    function setLang(l) {
+      curLang = l;
+      document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+      const activeIdx = l === 'ko' ? 0 : l === 'en' ? 1 : l === 'zh-TW' ? 2 : 3;
+      document.querySelectorAll('.lang-btn')[activeIdx].classList.add('active');
+
+      const dict = i18n[l];
+      document.getElementById('ui-title').innerText = dict.title;
+      document.getElementById('ui-subtitle').innerText = dict.subtitle;
+      document.getElementById('ui-fast-calc').innerText = dict.fastCalc;
+      document.getElementById('ui-team-a-label').innerText = dict.teamA;
+      document.getElementById('ui-team-b-label').innerText = dict.teamB;
+      document.getElementById('ui-multi-calc').innerText = dict.multiCalc;
+      document.getElementById('th-name').innerText = dict.matchName;
+      document.getElementById('th-rate').innerText = dict.winRate;
+      document.getElementById('th-result').innerText = dict.result;
+      document.getElementById('th-reason').innerText = dict.reason;
+      document.getElementById('ui-add-row').innerText = dict.addRow;
+      document.getElementById('ui-reset-btn').innerText = dict.resetBtn;
+      document.getElementById('ui-clear-btn').innerText = dict.clearBtn;
+
+      calcQuick();
+      recalcTable();
+    }
+
+    // Engine: calculates exact 36 match outcomes & reasoning
+    function evaluateMatch(aRaw, bRaw) {
+      const a = aRaw.filter(x => !isNaN(x) && x > 0).sort((x, y) => y - x);
+      const b = bRaw.filter(x => !isNaN(x) && x > 0).sort((x, y) => y - x);
+      if (a.length < 3 || b.length < 3) return null;
+
+      const [a1, a2, a3] = a;
+      const [b1, b2, b3] = b;
+
+      // 6 permutation matchups of B against fixed sorted A
+      let wins = 0;
+      const bPerms = [
+        [b1, b2, b3], [b1, b3, b2],
+        [b2, b1, b3], [b2, b3, b1],
+        [b3, b1, b2], [b3, b2, b1]
+      ];
+
+      for (const bp of bPerms) {
+        let roundWins = 0;
+        if (a1 > bp[0]) roundWins++;
+        if (a2 > bp[1]) roundWins++;
+        if (a3 > bp[2]) roundWins++;
+        if (roundWins >= 2) wins++;
+      }
+
+      const rate = wins / 6; // exact rate out of 36
+      const winCount36 = wins * 6;
+      const dict = i18n[curLang];
+
+      let verdict = '';
+      let badgeClass = '';
+      let reason = '';
+
+      if (wins === 6) {
+        verdict = dict.aGuar;
+        badgeClass = 'badge-win';
+      } else if (wins === 0) {
+        verdict = dict.bGuar;
+        badgeClass = 'badge-lose';
+      } else if (wins > 3) {
+        verdict = dict.aAdv((rate * 100).toFixed(1));
+        badgeClass = 'badge-win';
+      } else if (wins < 3) {
+        verdict = dict.bAdv(((1 - rate) * 100).toFixed(1));
+        badgeClass = 'badge-lose';
+      } else {
+        verdict = dict.tie;
+        badgeClass = 'badge-even';
+      }
+
+      if (a2 > b1) reason = dict.aT2B1;
+      else if (a3 > b2) reason = dict.aT3B2;
+      else if (b2 > a1) reason = dict.bT2A1;
+      else if (b3 > a2) reason = dict.bT3A2;
+      else if (a2 > b2) reason = dict.aMidAdv(winCount36);
+      else if (b2 > a2) reason = dict.bMidAdv(36 - winCount36);
+      else reason = dict.evenReason;
+
+      return { rate: (rate * 100).toFixed(1) + '%', verdict, badgeClass, reason };
+    }
+
+    function calcQuick() {
+      const a = [
+        parseFloat(document.getElementById('qa1').value),
+        parseFloat(document.getElementById('qa2').value),
+        parseFloat(document.getElementById('qa3').value)
+      ];
+      const b = [
+        parseFloat(document.getElementById('qb1').value),
+        parseFloat(document.getElementById('qb2').value),
+        parseFloat(document.getElementById('qb3').value)
+      ];
+
+      const res = evaluateMatch(a, b);
+      const resBox = document.getElementById('quick-result');
+      if (!res) {
+        resBox.style.display = 'none';
+        return;
+      }
+      resBox.style.display = 'block';
+      document.getElementById('q-verdict').innerText = res.verdict;
+      document.getElementById('q-rate').innerText = res.rate;
+      document.getElementById('q-reason').innerText = res.reason;
+    }
+
+    const defaultMatches = [
+      [1500, 1300, 1100, 1250, 1150, 950],
+      [1400, 1200, 1050, 1450, 1000, 900],
+      [1500, 1100, 800, 1350, 1250, 600],
+      [1200, 1100, 900, 1600, 1300, 1000],
+      [1500, 1100, 900, 1600, 1250, 1150],
+      [1200, 1100, 1000, 1200, 1100, 1000]
+    ];
+
+    function renderRow(idx, data = [0,0,0,0,0,0]) {
+      const dict = i18n[curLang];
+      const name = dict.matchSuffix ? `${dict.matchPrefix}${idx}${dict.matchSuffix}` : `${dict.matchPrefix}${idx}`;
+      return `
+        <tr id="row-${idx}">
+          <td>${idx}</td>
+          <td><input class="table-input" style="width:72px" value="${name}"></td>
+          <td><input class="table-input" type="number" value="${data[0] || ''}" oninput="recalcRow(${idx})"></td>
+          <td><input class="table-input" type="number" value="${data[1] || ''}" oninput="recalcRow(${idx})"></td>
+          <td><input class="table-input" type="number" value="${data[2] || ''}" oninput="recalcRow(${idx})"></td>
+          <td><input class="table-input" type="number" value="${data[3] || ''}" oninput="recalcRow(${idx})"></td>
+          <td><input class="table-input" type="number" value="${data[4] || ''}" oninput="recalcRow(${idx})"></td>
+          <td><input class="table-input" type="number" value="${data[5] || ''}" oninput="recalcRow(${idx})"></td>
+          <td id="res-rate-${idx}">-</td>
+          <td id="res-verdict-${idx}">-</td>
+          <td id="res-reason-${idx}" style="text-align:left; font-size:0.75rem; color:#94a3b8;">-</td>
+          <td><button class="btn-del" onclick="delRow(${idx})">&times;</button></td>
+        </tr>
+      `;
+    }
+
+    function recalcRow(idx) {
+      const r = document.getElementById(`row-${idx}`);
+      if (!r) return;
+      const inputs = r.querySelectorAll('input[type="number"]');
+      const a = [parseFloat(inputs[0].value), parseFloat(inputs[1].value), parseFloat(inputs[2].value)];
+      const b = [parseFloat(inputs[3].value), parseFloat(inputs[4].value), parseFloat(inputs[5].value)];
+      const res = evaluateMatch(a, b);
+
+      const tdRate = document.getElementById(`res-rate-${idx}`);
+      const tdVerdict = document.getElementById(`res-verdict-${idx}`);
+      const tdReason = document.getElementById(`res-reason-${idx}`);
+
+      if (!res) {
+        tdRate.innerText = '-';
+        tdVerdict.innerHTML = '-';
+        tdReason.innerText = '-';
+        return;
+      }
+
+      tdRate.innerText = res.rate;
+      tdVerdict.innerHTML = `<span class="badge ${res.badgeClass}">${res.verdict}</span>`;
+      tdReason.innerText = res.reason;
+    }
+
+    function recalcTable() {
+      const rows = document.querySelectorAll('#match-tbody tr');
+      rows.forEach(r => {
+        const idx = r.id.replace('row-', '');
+        recalcRow(idx);
+      });
+    }
+
+    let rowCount = 0;
+    function addRow(data) {
+      rowCount++;
+      const tbody = document.getElementById('match-tbody');
+      tbody.insertAdjacentHTML('beforeend', renderRow(rowCount, data));
+      recalcRow(rowCount);
+    }
+
+    function delRow(idx) {
+      const r = document.getElementById(`row-${idx}`);
+      if (r) r.remove();
+    }
+
+    function resetSample() {
+      const tbody = document.getElementById('match-tbody');
+      tbody.innerHTML = '';
+      rowCount = 0;
+      defaultMatches.forEach(m => addRow(m));
+    }
+
+    function clearRows() {
+      document.getElementById('match-tbody').innerHTML = '';
+      rowCount = 0;
+      addRow();
+    }
+
+    // Init
+    resetSample();
+    calcQuick();
+  </script>
+</body>
+</html>
